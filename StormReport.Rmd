@@ -1,0 +1,18 @@
+---
+title: "Ranking of weather events by impact on public health and economic damage"
+author: "Joel Berman"
+date: "November 13, 2015"
+output: html_document
+---
+`r opts_chunk$set(cache=TRUE)`
+
+## Synopsis
+This report extracts key data about public health and economic aspects of storms from NOAA data.  Weather events causeing 80% of the health and economic problems are ranked.  The expected use of this analysis is to aid priotization of emergency management resources.
+
+Chart of fatalities and injuries
+Chart of property and crop damage
+
+## Data processing
+
+Workflow  to produce meaningful health and economic information from raw data to final representation
+
