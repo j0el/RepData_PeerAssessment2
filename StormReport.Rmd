@@ -4,8 +4,16 @@ author: "Joel Berman"
 date: "November 13, 2015"
 output: html_document
 ---
-`r opts_chunk$set(cache=TRUE)`
-
+#### Housekeeping
+The following chunk of code is for housekeeping, and environment setup
+```{r houseKeep}
+# install.packages("data.table","R.utils","fasttime","psych")
+seed <- 1947
+reportCreationTime <- Sys.time()
+library(R.oo,  warn.conflicts = FALSE, quietly=TRUE)
+library(data.table, warn.conflicts = FALSE, quietly=TRUE)
+library(R.utils, warn.conflicts = FALSE, quietly=TRUE)
+```
 ## Synopsis
 This report extracts key data about public health and economic aspects of storms from NOAA data.  Weather events causeing 80% of the health and economic problems are ranked.  The expected use of this analysis is to aid priotization of emergency management resources.
 
@@ -16,3 +24,78 @@ Chart of property and crop damage
 
 Workflow  to produce meaningful health and economic information from raw data to final representation
 
+First we source the raw data. If not present, we download from the web source, decompress and create the object stormData.
+
+```{r readData, cache=TRUE}
+if (!exists("stormData")) {
+    download.file(
+    "http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2",
+    destfile = "./stormData.csv.bz2"
+    )
+    bunzip2("./StormData.csv.bz2", overwrite = TRUE, remove = TRUE)
+    stormData <- fread("StormData.csv",showProgress = FALSE)
+    }
+dim(stormData)
+```
+Second, we become familiar with the data by examining various statistics and variables. Although there are 37 variables, we are only interested in the year and type of the event, injuries, fatalities, property damage, and crop damage.  
+
+We create a year column in the dataset to examine statistics by year and then look at the events reported each year.  We notice that reporting only picked up around 1995, so we will ignore data before 1995.  
+
+We reformat and tidy the data to show the injuries, death, crop and property damage by type of event by year.
+
+```{r lookAndTidy}
+
+stormData$year <- year(as.Date(stormData$BGN_DATE, format = "%m/%d/%Y %H:%M:%S"))
+finalYear <- max(stormData$year)
+firstYear <- min(stormData$year)
+hist(stormData$year,breaks = finalYear-firstYear)
+```
+
+Subset data to only include events meeting the following conditions
+1. Date of event is 1995 or later  
+2. At last one of Injury, Fatality, Property Damage, or Crop Damage is greater than 0  
+3. Exponent for Property or Crop Damage equal to an exponent of [H | h | K | k | M | m | B | b] (hundreds, thousands, millions, billions)  
+
+As you see the, number of rows containing useful information is significantly less than the total raw data, however this is due to incomplete and improperly filled out forms. Inspection of the data yields no practical way of reconstructing or imputing missing fields.  The question we are answering is about the most significant types of weather with respect to human and financial damage and our data should be relatively sufficient to prioritize budgetary and resource allocation plans.
+
+
+```{r prune, cache=TRUE}
+
+usefulStormData <-
+    subset(
+        stormData, year >= 1995 &
+            FATALITIES + INJURIES + PROPDMG + CROPDMG != 0,
+        select = c(EVTYPE, FATALITIES:CROPDMGEXP,year)
+    )
+# dim(usefulStormData)
+# head(usefulStormData)
+# tail(usefulStormData)
+```
+
+```{r echo=FALSE}
+print(sprintf("The raw data contains %s rows.  Pruning leaves %s useful rows.", formatC(nrow(stormData), format="d", big.mark = ","),formatC(nrow(usefulStormData), format="d", big.mark = ",")))
+```
+
+We now continue with tidying the data by normalizing the monetary amounts and collapsing the various event types into a smaller number of categories.  We will also adjust the monetary values for inflation using the US Consumer Price Index 
+
+```{r cashAndCategories, cache=TRUE}
+# usefulStormData$PropertyDamage <-
+#     sapply(usefulStormData$PROPDMGEXP, switch,
+#            H = usefulStormData$CROPDMG*100,
+#            K = usefulStormData$CROPDMG*1000,
+#            M = usefulStormData$CROPDMG*1000000,
+#            B = usefulStormData$CROPDMG*1000000000
+#            )
+```
+
+## Environment
+
+I found a codebook by searching the web. http://ire.org/media/uploads/files/datalibrary/samplefiles/Storm%20Events/layout08.doc which seems close to our raw data.
+
+I found a method on stackoverflow for adjusting dollars for inflation at 
+http://stackoverflow.com/questions/12590180/inflation-adjusted-prices-package
+
+
+
+
+sessionInfo()
